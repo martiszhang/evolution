@@ -1,0 +1,29 @@
+#- hosts: memcached
+#  roles:
+#    - config_hostname
+#    - config_timezone
+#    - config_selinux
+#    - reboot
+#    - config_yumrepo
+#    - chrony
+#    - memcached
+
+#- hosts: rabbitmq
+#  roles:
+#    - config_hostname
+#    - config_timezone
+#    - config_selinux
+#    - reboot
+#    - config_yumrepo
+#    - chrony
+#    - rabbitmq
+
+- hosts: redis
+  roles:
+#    - config_hostname
+#    - config_timezone
+#    - config_selinux
+#    - reboot
+#    - config_yumrepo
+#    - chrony
+    - redis

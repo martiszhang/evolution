@@ -1,0 +1,16 @@
+---
+- name: Install the latest version of redis
+  yum: name=redis state=present
+
+- name: Set vm.overcommit_memory to 1 in /etc/sysctl.conf
+  sysctl: name=vm.overcommit_memory value=1 state=present
+
+- name: Copy redis.conf.j2 to /etc/redis.conf
+  template: src=redis.conf.j2 dest=/etc/redis.conf owner=redis group=root mode=0640
+
+- name: Configure  firewalld policy
+  firewalld: port={{ item }}/tcp permanent=true state=enabled immediate=true
+  loop: "{{ redis_port }}"
+
+- name: Add memcached to systemd 
+  systemd: name=redis state=started enabled=yes masked=no

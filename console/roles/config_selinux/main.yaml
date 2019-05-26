@@ -1,0 +1,6 @@
+- name: Disable selinux
+  selinux: state={{ selinux_state }} policy=targeted
+  register: result
+
+- name: debug result
+  debug: msg="{{result}}"

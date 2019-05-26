@@ -1,0 +1,80 @@
+---
+- name: install the latest version of erlang socat logrotate for rabbitmq
+  yum: name={{ item }} state=latest
+  loop:
+    - erlang
+    - socat
+    - logrotate
+
+- name: Install the latest version of rabbitmq-server 
+  yum: name=rabbitmq-server state=latest
+
+- name: Copy hosts.j2 to /etc/hosts 
+  template: src=hosts.j2 dest=/etc/hosts owner=root group=root mode=0644 force=yes
+
+- name: Copy rabbitmq-env.conf  to /etc/rabbitmq/
+  copy: src=rabbitmq-env.conf dest=/etc/rabbitmq/rabbitmq-env.conf owner=root group=root mode=0644 force=yes
+
+- name: Create directory /etc/systemd/system/rabbitmq-server.service.d
+  file: path=/etc/systemd/system/rabbitmq-server.service.d state=directory owner=root group=root mode=0755
+
+- name: Copy file limit.conf to /etc/systemd/system/rabbitmq-server.service.d
+  copy: src=limit.conf dest=/etc/systemd/system/rabbitmq-server.service.d/limit.conf  mode=0644 owner=root group=root force=yes
+
+- name: Configure  firewalld policy
+  firewalld: port={{ item }}/tcp permanent=true state=enabled immediate=true
+  loop: "{{ rabbitmq_port }}"
+
+- name: Add rabbitmq-server to systemd 
+  systemd: name=rabbitmq-server state=started enabled=yes masked=no 
+#  debug: msg="{{ inventory_hostname }}"
+  when: inventory_hostname == groups['rabbitmq'] | first
+
+- name: Store /var/lib/rabbitmq/.erlang.cookie  into /tmp/
+  fetch: src=/var/lib/rabbitmq/.erlang.cookie dest=/tmp/ flat=yes
+  when: inventory_hostname == groups['rabbitmq'] | first
+
+- name: Copy /tmp/.erlang.cookie to {{ inventory_hostname }} exclude first
+  copy: src=/tmp/.erlang.cookie dest=/var/lib/rabbitmq/.erlang.cookie  owner=rabbitmq group=rabbitmq mode=0600 force=yes
+  when: inventory_hostname != groups['rabbitmq'] | first
+
+- name: Add rabbitmq-server to systemd 
+  systemd: name=rabbitmq-server state=started enabled=yes masked=no
+  when: inventory_hostname != groups['rabbitmq'] | first
+
+- name: Stop app and rest rabbitmq-server exclude first rabbitmq-server
+  shell: rabbitmqctl stop_app && rabbitmqctl reset
+  when: inventory_hostname != groups['rabbitmq'] | first
+
+- name: Add other rabbitmq-server to first rabbitmq-server to config a cluster
+  shell: rabbitmqctl join_cluster rabbit@{{ hostvars[groups['rabbitmq']|first]['hostname'] }}
+#  debug: msg="rabbitmqctl join_cluster rabbit@{{ hostvars[groups['rabbitmq']|first]['hostname'] }}"
+  when: inventory_hostname != groups['rabbitmq'] | first
+
+- name: Start app on rabbitmq-server exclude first rabbitmq-server
+  shell: rabbitmqctl start_app
+  when: inventory_hostname != groups['rabbitmq'] | first
+
+- name: Enable rabbitmq-server rabbitmq-management
+  shell: rabbitmq-plugins enable rabbitmq_management
+
+- name: Create vhost ecscloud
+  rabbitmq_vhost: name=ecscloud state=present
+ 
+- name: Create user rabbitmqadmin
+  rabbitmq_user: 
+    user: rabbitmqadmin
+    password: rabbitmqadmin
+    tags: administrator
+    permissions:
+      - vhost: /
+        configure_priv: .*
+        read_priv: .*
+        write_priv: .*
+      - vhost: ecscloud	
+        configure_priv: .*
+        read_priv: .*
+        write_priv: .*
+    state: present
+  when: inventory_hostname == groups['rabbitmq'] | first
+ 

@@ -1,0 +1,18 @@
+[all:vars]
+selinux_state=disabled
+#upstreamtimeserver=0.centos.pool.ntp.org
+ansible_connection=ssh 
+ansible_ssh_pass=123456
+ansible_ssh_port=22
+
+redis_master_slave_auth=PaM!oNQF
+
+[memcached]
+192.168.18.7 hostname=console-memcached-01.ctyun.cn
+[rabbitmq]
+192.168.18.6 hostname=console-rabbitmq-01.ctyun.cn
+192.168.18.7 hostname=console-rabbitmq-02.ctyun.cn
+
+[redis]
+192.168.18.6 hostname=console-redis-01.ctyun.cn
+192.168.18.7 hostname=console-redis-02.ctyun.cn
